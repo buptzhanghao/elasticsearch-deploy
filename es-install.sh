@@ -8,10 +8,11 @@
 #   ES_LOCAL_IP      - ES节点IP
 #   ES_IP_LIST       - ES集群节点IP列表
 #   ES_CLUSTER_NAME  - ES集群名
+#   HTTP_PORT        - ES节点的HTTP端口
 #   ES_NODE_TYPE     - ES节点类型
 #   ES_VERSION       - ES版本号
 # Example:
-#   1) ./es-install.sh . 1 127.0.0.1 127.0.0.1,127.0.0.2,127.0.0.3 xm-search DATA 1.7.3
+#   1) ./es-install.sh . 1 127.0.0.1 127.0.0.1,127.0.0.2,127.0.0.3 xm-search 8412 DATA 1.7.3
 #************************************************************************************************
 
 #==============================
@@ -21,11 +22,22 @@ if [ $# -lt 5 ];
 then
     echo -e "\033[31m<WARN> USAGE:\n    /bin/bash es-install.sh <INSTALL_PTAH> <ES_NODE_NUM>\033[0m"
     echo -e "\033[31m                                           <ES_LOCAL_IP> <ES_IP_LIST> <ES_CLUSTER_NAME>\033[0m"
-    echo -e "\033[31m                                           <ES_NODE_TYPE> <ES_VERSION>\033[0m"
+    echo -e "\033[31m                                           <HTTP_PORT> <ES_NODE_TYPE> <ES_VERSION>\033[0m"
     exit 1
 fi
 
 if [ $# -lt 6 ]
+then
+    echo -e "<INFO> USE default HTTP_PORT : 9200 && default ES_VERSION : 1.7.3 && default node type : DATA."
+    INSTALL_PATH=$1
+    ES_NODE_NUM=$2
+    ES_LOCAL_IP=$3
+    ES_IP_LIST=$4
+    ES_CLUSTER_NAME=$5
+    HTTP_PORT="9200"
+    ES_NODE_TYPE="DATA"
+    ES_VERSION="1.7.3"
+elif [ $# -eq 6 ]
 then
     echo -e "<INFO> USE default ES_VERSION : 1.7.3 && default node type : DATA."
     INSTALL_PATH=$1
@@ -33,9 +45,10 @@ then
     ES_LOCAL_IP=$3
     ES_IP_LIST=$4
     ES_CLUSTER_NAME=$5
+    HTTP_PORT=$6
     ES_NODE_TYPE="DATA"
     ES_VERSION="1.7.3"
-elif [ $# -eq 6 ]
+elif [ $# -eq 7  ]
 then
     echo -e "<INFO> USE default ES_VERSION : 1.7.3."
     INSTALL_PATH=$1
@@ -43,7 +56,8 @@ then
     ES_LOCAL_IP=$3
     ES_IP_LIST=$4
     ES_CLUSTER_NAME=$5
-    ES_NODE_TYPE=$6
+    HTTP_PORT=$6
+    ES_NODE_TYPE=$7
     ES_VERSION="1.7.3"
 else
     INSTALL_PATH=$1
@@ -51,8 +65,9 @@ else
     ES_LOCAL_IP=$3
     ES_IP_LIST=$4
     ES_CLUSTER_NAME=$5
-    ES_NODE_TYPE=$6
-    ES_VERSION=$7
+    HTTP_PORT=$6
+    ES_NODE_TYPE=$7
+    ES_VERSION=$8
 fi
 
 if [ ${ES_NODE_TYPE}"x" = "MASTERx" ]
@@ -209,7 +224,7 @@ then
     sed -i "s?#path.logs: .*?path.logs: ${LOGS_PATH}?" ${CONFIG_FILE}
     sed -i "s?#path.plugins: .*?path.plugins: ${PLUGINS_PATH}?" ${CONFIG_FILE}
     sed -i "s/#bootstrap.mlockall/bootstrap.mlockall/g" ${CONFIG_FILE}
-    sed -i "s/#http.port: 9200/http.port: 8418/g" ${CONFIG_FILE}
+    sed -i "s/#http.port: 9200/http.port: ${HTTP_PORT}/g" ${CONFIG_FILE}
     sed -i "s/#discovery.zen.ping.multicast.enabled/discovery.zen.ping.multicast.enabled/g" ${CONFIG_FILE}
 else
     echo "---------MAC---------"
@@ -220,7 +235,7 @@ else
     sed -i "" "s?#path.logs: .*?path.logs: ${LOGS_PATH}?" ${CONFIG_FILE}
     sed -i "" "s?#path.plugins: .*?path.plugins: ${PLUGINS_PATH}?" ${CONFIG_FILE}
     sed -i "" "s/#bootstrap.mlockall/bootstrap.mlockall/g" ${CONFIG_FILE}
-    sed -i "" "s/#http.port: 9200/http.port: 8418/g" ${CONFIG_FILE}
+    sed -i "" "s/#http.port: 9200/http.port: ${HTTP_PORT}/g" ${CONFIG_FILE}
     sed -i "" "s/#discovery.zen.ping.multicast.enabled/discovery.zen.ping.multicast.enabled/g" ${CONFIG_FILE}
 fi
 
@@ -416,18 +431,21 @@ PLUGIN=${BIN_PATH}"/plugin"
 
 cd ${BIN_PATH}
 
-#echo -e "<INFO> Install plugin HEAD start......"
-#${PLUGIN} -install mobz/elasticsearch-head
-#echo -e "<INOF> Install plugin HEAD finished..."
-#
-#echo -e "<INFO> Install plugin BIGDESK start......"
-#${PLUGIN} -install lukas-vlcek/bigdesk/2.4.0
-#echo -e "<INFO> Install plugin BIGDESK finished..."
-#
-#echo -e "<INFO> Install plugin Paramedic start......"
-#${PLUGIN} -install karmi/elasticsearch-paramedic
-#echo -e "<INFO> Install plugin Paramedic finished..."
 
+if [ ${ES_NODE_TYPE}"x" = "MASTERx"  ] || [ ${ES_NODE_TYPE}"x" = "MASTERDATAx"  ]
+then
+    echo -e "<INFO> Install plugin HEAD start......"
+    ${PLUGIN} -install mobz/elasticsearch-head
+    echo -e "<INOF> Install plugin HEAD finished..."
+    
+    #echo -e "<INFO> Install plugin BIGDESK start......"
+    #${PLUGIN} -install lukas-vlcek/bigdesk/2.4.0
+    #echo -e "<INFO> Install plugin BIGDESK finished..."
+    
+    #echo -e "<INFO> Install plugin Paramedic start......"
+    #${PLUGIN} -install karmi/elasticsearch-paramedic
+    #echo -e "<INFO> Install plugin Paramedic finished..."
+fi
 
 
 #=================================
@@ -471,4 +489,4 @@ echo -e "$IK_YML" >> ${CONFIG_FILE}
 echo -e "<INFO> Install IK finish......"
 
 
-echo -e "\n================================================\n<INFO> Install ES in ${ES_NODE_TYPE} success.\n================================================\n"
+echo -e "\n================================================\n<INFO> Install ES in ${ES_NODE_TYPE} mode on node ${ES_LOACL_IP} success.\n================================================\n"
